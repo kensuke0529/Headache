@@ -12,9 +12,9 @@ COPY fetch_headache_data.py .
 COPY templates/ templates/
 COPY static/ static/
 
-# Expose port (Render will set PORT env var)
-EXPOSE ${PORT:-5000}
+# Expose port
+EXPOSE 5000
 
-# Run the app (use PORT env var if available, default to 5000)
-CMD gunicorn --bind 0.0.0.0:${PORT:-5000} --timeout 120 app:app
+# Run the app (Render sets PORT env var, use it if available)
+CMD sh -c 'gunicorn --bind 0.0.0.0:${PORT:-5000} --timeout 120 app:app'
 
