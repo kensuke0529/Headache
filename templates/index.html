@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Headache Tracker</title>
+    <!-- Markdown rendering library -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.0.0/marked.min.js" crossorigin="anonymous"></script>
+    <!-- Syntax highlighting for code blocks -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" crossorigin="anonymous">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" crossorigin="anonymous"></script>
     <style>
         * {
             margin: 0;
@@ -88,6 +93,111 @@
         .message.assistant .message-content {
             background: #f0f0f0;
             color: #333;
+        }
+
+        /* Markdown styling */
+        .message-content h1,
+        .message-content h2,
+        .message-content h3,
+        .message-content h4 {
+            margin: 12px 0 8px 0;
+            font-weight: 600;
+        }
+
+        .message-content h1 { font-size: 1.5em; }
+        .message-content h2 { font-size: 1.3em; }
+        .message-content h3 { font-size: 1.1em; }
+        .message-content h4 { font-size: 1em; }
+
+        .message-content p {
+            margin: 8px 0;
+            line-height: 1.6;
+        }
+
+        .message-content ul,
+        .message-content ol {
+            margin: 8px 0;
+            padding-left: 24px;
+        }
+
+        .message-content li {
+            margin: 4px 0;
+            line-height: 1.5;
+        }
+
+        .message-content code {
+            background: rgba(0, 0, 0, 0.05);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9em;
+        }
+
+        .message.user .message-content code {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .message-content pre {
+            background: #f6f8fa;
+            border-radius: 6px;
+            padding: 12px;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+
+        .message-content pre code {
+            background: none;
+            padding: 0;
+            font-size: 0.85em;
+            line-height: 1.5;
+        }
+
+        .message-content blockquote {
+            border-left: 3px solid #ddd;
+            padding-left: 12px;
+            margin: 8px 0;
+            color: #666;
+        }
+
+        .message-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 10px 0;
+        }
+
+        .message-content th,
+        .message-content td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .message-content th {
+            background: #f0f0f0;
+            font-weight: 600;
+        }
+
+        .message-content a {
+            color: #0066cc;
+            text-decoration: none;
+        }
+
+        .message-content a:hover {
+            text-decoration: underline;
+        }
+
+        .message-content strong {
+            font-weight: 600;
+        }
+
+        .message-content em {
+            font-style: italic;
+        }
+
+        .message-content hr {
+            border: none;
+            border-top: 1px solid #ddd;
+            margin: 16px 0;
         }
 
         .input-area {
@@ -223,122 +333,168 @@
     </div>
 
     <script>
-        const messagesDiv = document.getElementById('messages');
-        const messageInput = document.getElementById('messageInput');
-        const sendBtn = document.getElementById('sendBtn');
-        const reloadBtn = document.getElementById('reloadBtn');
-        const resetBtn = document.getElementById('resetBtn');
-        const statusDiv = document.getElementById('status');
-
-        let dataLoaded = {{ 'true' if data_loaded else 'false' }};
-
-        function setStatus(message, success = false) {
-            statusDiv.textContent = message;
-            statusDiv.className = success ? 'status success' : 'status';
-        }
-
-        function addMessage(content, isUser = false) {
-            const welcome = messagesDiv.querySelector('.welcome');
-            if (welcome) welcome.remove();
-
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${isUser ? 'user' : 'assistant'}`;
-            
-            const contentDiv = document.createElement('div');
-            contentDiv.className = 'message-content';
-            contentDiv.textContent = content;
-            
-            messageDiv.appendChild(contentDiv);
-            messagesDiv.appendChild(messageDiv);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        }
-
-        async function reloadData() {
-            reloadBtn.disabled = true;
-            setStatus('Reloading data...');
-
-            try {
-                const response = await fetch('/api/load-data', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'}
-                });
-                const data = await response.json();
-
-                if (data.success) {
-                    dataLoaded = true;
-                    setStatus(`Data reloaded: ${data.count} records`, true);
-                    messageInput.disabled = false;
-                    sendBtn.disabled = false;
-                    messageInput.focus();
-                } else {
-                    setStatus(`Error: ${data.message}`);
-                }
-            } catch (error) {
-                setStatus('Error reloading data');
-            } finally {
-                reloadBtn.disabled = false;
-            }
-        }
-
-        async function sendMessage() {
-            const message = messageInput.value.trim();
-            if (!message) return;
-
-            messageInput.value = '';
-            messageInput.disabled = true;
-            sendBtn.disabled = true;
-            setStatus('Thinking...');
-
-            addMessage(message, true);
-
-            try {
-                const response = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({message})
-                });
-                const data = await response.json();
-
-                if (data.success) {
-                    addMessage(data.message, false);
-                    setStatus('Ready', true);
-                } else {
-                    setStatus(`Error: ${data.message}`);
-                }
-            } catch (error) {
-                setStatus('Error sending message');
-            }
-
-            messageInput.disabled = false;
-            sendBtn.disabled = false;
-            messageInput.focus();
-        }
-
-        async function resetChat() {
-            try {
-                await fetch('/api/reset', {method: 'POST'});
-                messagesDiv.innerHTML = '<div class="welcome"><h2>Chat Reset</h2><p>Start a new conversation</p></div>';
-                setStatus('Ready', true);
-            } catch (error) {
-                setStatus('Error resetting chat');
-            }
-        }
-
-        // Event listeners
-        reloadBtn.addEventListener('click', reloadData);
-        sendBtn.addEventListener('click', sendMessage);
-        resetBtn.addEventListener('click', resetChat);
-
-        messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendMessage();
+        // Wait for libraries to load
+        window.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
         });
 
-        // Auto-focus input if data is loaded
-        if (dataLoaded) {
-            messageInput.focus();
-            setStatus('Data loaded: {{ data_count }} records', true);
+        function initializeApp() {
+            const messagesDiv = document.getElementById('messages');
+            const messageInput = document.getElementById('messageInput');
+            const sendBtn = document.getElementById('sendBtn');
+            const reloadBtn = document.getElementById('reloadBtn');
+            const resetBtn = document.getElementById('resetBtn');
+            const statusDiv = document.getElementById('status');
+
+            let dataLoaded = {{ 'true' if data_loaded else 'false' }};
+
+            // Check if libraries are loaded
+            console.log('Marked library loaded:', typeof marked !== 'undefined');
+            console.log('Highlight.js loaded:', typeof hljs !== 'undefined');
+
+            // Configure marked for better rendering
+            if (typeof marked !== 'undefined') {
+                marked.setOptions({
+                    breaks: true,
+                    gfm: true,
+                    headerIds: false,
+                    mangle: false
+                });
+                console.log('Marked configured successfully');
+            } else {
+                console.error('Marked library not loaded!');
+            }
+
+            function setStatus(message, success = false) {
+                statusDiv.textContent = message;
+                statusDiv.className = success ? 'status success' : 'status';
+            }
+
+            function addMessage(content, isUser = false) {
+                const welcome = messagesDiv.querySelector('.welcome');
+                if (welcome) welcome.remove();
+
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${isUser ? 'user' : 'assistant'}`;
+                
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'message-content';
+                
+                if (isUser) {
+                    // For user messages, keep as plain text
+                    contentDiv.textContent = content;
+                    console.log('Added user message (plain text)');
+                } else {
+                    // For assistant messages, render markdown
+                    console.log('Adding assistant message, marked available:', typeof marked !== 'undefined');
+                    if (typeof marked !== 'undefined') {
+                        const rendered = marked.parse(content);
+                        contentDiv.innerHTML = rendered;
+                        console.log('Markdown rendered, HTML length:', rendered.length);
+                        // Apply syntax highlighting to code blocks if hljs is available
+                        if (typeof hljs !== 'undefined') {
+                            contentDiv.querySelectorAll('pre code').forEach((block) => {
+                                hljs.highlightElement(block);
+                            });
+                        }
+                    } else {
+                        // Fallback to plain text if marked is not loaded
+                        console.warn('Marked not available, using plain text');
+                        contentDiv.textContent = content;
+                    }
+                }
+                
+                messageDiv.appendChild(contentDiv);
+                messagesDiv.appendChild(messageDiv);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            }
+
+            async function reloadData() {
+                reloadBtn.disabled = true;
+                setStatus('Reloading data...');
+
+                try {
+                    const response = await fetch('/api/load-data', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'}
+                    });
+                    const data = await response.json();
+
+                    if (data.success) {
+                        dataLoaded = true;
+                        setStatus(`Data reloaded: ${data.count} records`, true);
+                        messageInput.disabled = false;
+                        sendBtn.disabled = false;
+                        messageInput.focus();
+                    } else {
+                        setStatus(`Error: ${data.message}`);
+                    }
+                } catch (error) {
+                    setStatus('Error reloading data');
+                } finally {
+                    reloadBtn.disabled = false;
+                }
+            }
+
+            async function sendMessage() {
+                const message = messageInput.value.trim();
+                if (!message) return;
+
+                messageInput.value = '';
+                messageInput.disabled = true;
+                sendBtn.disabled = true;
+                setStatus('Thinking...');
+
+                addMessage(message, true);
+
+                try {
+                    const response = await fetch('/api/chat', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({message})
+                    });
+                    const data = await response.json();
+
+                    if (data.success) {
+                        addMessage(data.message, false);
+                        setStatus('Ready', true);
+                    } else {
+                        setStatus(`Error: ${data.message}`);
+                    }
+                } catch (error) {
+                    setStatus('Error sending message');
+                }
+
+                messageInput.disabled = false;
+                sendBtn.disabled = false;
+                messageInput.focus();
+            }
+
+            async function resetChat() {
+                try {
+                    await fetch('/api/reset', {method: 'POST'});
+                    messagesDiv.innerHTML = '<div class="welcome"><h2>Chat Reset</h2><p>Start a new conversation</p></div>';
+                    setStatus('Ready', true);
+                } catch (error) {
+                    setStatus('Error resetting chat');
+                }
+            }
+
+            // Event listeners
+            reloadBtn.addEventListener('click', reloadData);
+            sendBtn.addEventListener('click', sendMessage);
+            resetBtn.addEventListener('click', resetChat);
+
+            messageInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') sendMessage();
+            });
+
+            // Auto-focus input if data is loaded
+            if (dataLoaded) {
+                messageInput.focus();
+                setStatus('Data loaded: {{ data_count }} records', true);
+            }
         }
     </script>
 </body>
 </html>
-

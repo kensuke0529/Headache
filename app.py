@@ -103,6 +103,8 @@ def api_load_data():
     if data:
         session["data_loaded"] = True
         session["headache_data"] = format_data_for_context(data)
+        session["data_count"] = len(data)
+        session.modified = True
         return jsonify(
             {
                 "success": True,

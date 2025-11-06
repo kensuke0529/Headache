@@ -1,8 +1,4 @@
-Access to 0.0.0.0 was denied
-You don't have authorization to view this page.
-HTTP ERROR 403Access to 0.0.0.0 was denied
-You don't have authorization to view this page.
-HTTP ERROR 403version: '3.8'
+version: '3.8'
 
 services:
   web:
@@ -14,4 +10,3 @@ services:
       - SERVICE_ACCOUNT_JSON=${SERVICE_ACCOUNT_JSON}
       - DRIVE_FOLDER_ID=${DRIVE_FOLDER_ID}
     restart: unless-stopped
-
