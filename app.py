@@ -29,14 +29,16 @@ Be concise and friendly. Use simple language."""
 def load_headache_data():
     """Load headache data from Google Sheets."""
     try:
-        service_account_path = os.getenv("SERVICE_ACCOUNT_PATH")
+        service_account_path = os.getenv("SERVICE_ACCOUNT_PATH", "")
         drive_folder_id = os.getenv("DRIVE_FOLDER_ID")
 
-        if not service_account_path or not drive_folder_id:
+        # Need either SERVICE_ACCOUNT_JSON (Docker) or SERVICE_ACCOUNT_PATH (local)
+        has_credentials = os.getenv("SERVICE_ACCOUNT_JSON") or service_account_path
+        if not has_credentials or not drive_folder_id:
             return None
 
         fetcher = HeadacheDataFetcher(
-            service_account_path=service_account_path,
+            service_account_path=service_account_path or "/tmp/dummy.json",
             drive_folder_id=drive_folder_id,
         )
 
