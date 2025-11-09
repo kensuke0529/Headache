@@ -524,6 +524,70 @@ def api_analysis_data():
     return jsonify(analysis_data)
 
 
+@app.route("/input")
+def input_page():
+    """Render the input form page."""
+    return render_template("input.html")
+
+
+@app.route("/api/submit-entry", methods=["POST"])
+def api_submit_entry():
+    """Handle form submission to add new headache entry."""
+    try:
+        data = request.json
+        date = data.get("date", "")
+        start_time = data.get("startTime", "")
+        pain_level = data.get("painLevel", "")
+        pain_location = data.get("painLocation", "")
+        triggers = data.get("triggers", "")
+        medication = data.get("medication", "")
+        medication_count = data.get("medicationCount", "")
+        headache = data.get("headache", "Yes")
+        notes = data.get("notes", "")
+
+        # Validate required fields
+        if not date or not start_time or not pain_level or not headache:
+            return jsonify({"success": False, "message": "Date, start time, pain level, and headache status are required"})
+
+        # Get service account credentials
+        service_account_path = os.getenv("SERVICE_ACCOUNT_PATH", "")
+        drive_folder_id = os.getenv("DRIVE_FOLDER_ID")
+
+        # Need either SERVICE_ACCOUNT_JSON (Docker) or SERVICE_ACCOUNT_PATH (local)
+        has_credentials = os.getenv("SERVICE_ACCOUNT_JSON") or service_account_path
+        if not has_credentials or not drive_folder_id:
+            return jsonify({"success": False, "message": "Google Sheets not configured"})
+
+        # Create fetcher and append entry
+        fetcher = HeadacheDataFetcher(
+            service_account_path=service_account_path or "/tmp/dummy.json",
+            drive_folder_id=drive_folder_id,
+        )
+
+        success = fetcher.append_headache_entry(
+            date=date,
+            start_time=start_time,
+            pain_level=pain_level,
+            pain_location=pain_location,
+            triggers=triggers,
+            medication=medication,
+            medication_count=medication_count,
+            headache=headache,
+            notes=notes,
+        )
+
+        if success:
+            return jsonify({"success": True, "message": "Entry saved successfully"})
+        else:
+            return jsonify({"success": False, "message": "Failed to save entry"})
+
+    except Exception as e:
+        print(f"Error submitting entry: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "message": f"Error: {str(e)}"})
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5514))
     app.run(host="0.0.0.0", port=port, debug=False)

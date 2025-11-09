@@ -27,7 +27,7 @@ DRIVE_FOLDER_ID = os.getenv("DRIVE_FOLDER_ID")
 
 # Google API scopes
 SCOPES = [
-    "https://www.googleapis.com/auth/spreadsheets.readonly",
+    "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive.readonly",
 ]
 
@@ -267,6 +267,123 @@ class HeadacheDataFetcher:
         parsed_data = self.parse_headache_data(raw_data)
 
         return parsed_data
+
+    def append_headache_entry(
+        self,
+        date: str,
+        start_time: str,
+        pain_level: str,
+        pain_location: str = "",
+        triggers: str = "",
+        medication: str = "",
+        medication_count: str = "",
+        headache: str = "Yes",
+        notes: str = "",
+        range_name: str = "Sheet1"
+    ) -> bool:
+        """
+        Append a new headache entry to the spreadsheet.
+
+        Args:
+            date: Date in YYYY-MM-DD format
+            start_time: Start time in HH:MM format
+            pain_level: Pain level (0-10)
+            pain_location: Location of pain (optional)
+            triggers: Possible triggers (optional)
+            medication: Medication/drug name (optional)
+            medication_count: Number of medications taken (optional)
+            headache: Yes/No (default: Yes)
+            notes: Additional notes (optional)
+            range_name: The sheet name to append to
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            # Authenticate if not already done
+            if not self.sheets_service:
+                if not self.authenticate():
+                    return False
+
+            # Find spreadsheet
+            spreadsheet_id = self.find_spreadsheet()
+            if not spreadsheet_id:
+                print("❌ Could not find spreadsheet")
+                return False
+
+            # Get sheet names and use the first one if range_name is default
+            if range_name == "Sheet1":
+                sheet_names = self.get_sheet_names(spreadsheet_id)
+                if sheet_names:
+                    range_name = sheet_names[0]
+                    print(f"📄 Using sheet: {range_name}")
+
+            # Generate timestamp (current date and time)
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%m/%d/%Y %H:%M:%S")
+
+            # Format date as MM/DD/YYYY for consistency with existing data
+            try:
+                date_obj = datetime.strptime(date, "%Y-%m-%d")
+                formatted_date = date_obj.strftime("%m/%d/%Y")
+            except ValueError:
+                formatted_date = date  # Use as-is if parsing fails
+
+            # Format start time (convert from 24h to 12h format with AM/PM)
+            try:
+                time_obj = datetime.strptime(start_time, "%H:%M")
+                formatted_time = time_obj.strftime("%I:%M %p")
+            except ValueError:
+                formatted_time = start_time  # Use as-is if parsing fails
+
+            # Prepare the row data in the exact column order:
+            # Timestamp, Date, Start Time, Pain Scale, Pain location, Possible triggers,
+            # What medication did you take?, How many did you take?, Note, Headache?
+            row_data = [
+                timestamp,              # Timestamp
+                formatted_date,          # Date
+                formatted_time,         # Start Time
+                pain_level,             # Pain Scale
+                pain_location,          # Pain location
+                triggers,               # Possible triggers
+                medication,             # What medication did you take?
+                medication_count,       # How many did you take?
+                notes,                  # Note
+                headache                # Headache?
+            ]
+
+            # Append the row
+            body = {"values": [row_data]}
+
+            result = (
+                self.sheets_service.spreadsheets()
+                .values()
+                .append(
+                    spreadsheetId=spreadsheet_id,
+                    range=f"{range_name}!A:A",
+                    valueInputOption="USER_ENTERED",
+                    insertDataOption="INSERT_ROWS",
+                    body=body,
+                )
+                .execute()
+            )
+
+            updated_cells = result.get("updates", {}).get("updatedCells", 0)
+            if updated_cells > 0:
+                print(f"✅ Successfully added entry to spreadsheet")
+                return True
+            else:
+                print("⚠️  No cells were updated")
+                return False
+
+        except HttpError as e:
+            print(f"❌ Error appending entry: {e}")
+            return False
+        except Exception as e:
+            print(f"❌ Unexpected error: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
 
 
 def main():

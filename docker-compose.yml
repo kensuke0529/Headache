@@ -1,12 +1,24 @@
-version: '3.8'
-
 services:
   web:
     build: .
     ports:
-      - "5000:5000"
+      - "5001:5000"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - SERVICE_ACCOUNT_JSON=${SERVICE_ACCOUNT_JSON}
       - DRIVE_FOLDER_ID=${DRIVE_FOLDER_ID}
     restart: unless-stopped
+
+  # Bot service disabled - using website as input source instead
+  # bot:
+  #   build: .
+  #   environment:
+  #     - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
+  #     - USER_ID=${USER_ID}
+  #     - CHANNEL_ID=${CHANNEL_ID}
+  #     - TIMEZONE=${TIMEZONE:-America/Denver}
+  #     - REMINDER_HOUR=${REMINDER_HOUR:-9}
+  #     - REMINDER_MINUTE=${REMINDER_MINUTE:-21}
+  #     - PYTHONUNBUFFERED=1
+  #   command: python -u bot.py
+  #   restart: unless-stopped

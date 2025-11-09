@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log Headache - Headache Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+            background: #faf9f6;
+            color: #1a1a1a;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background: linear-gradient(180deg, #2d2d2d 0%, #1f1f1f 100%);
+            color: white;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #3a3a3a;
+            position: fixed;
+            left: 0;
+            top: 0;
+        }
+
+        .sidebar-header {
+            padding: 24px 20px;
+            border-bottom: 1px solid #3a3a3a;
+        }
+
+        .sidebar-header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .sidebar-header p {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: 4px;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 16px 0;
+            overflow-y: auto;
+        }
+
+        .sidebar-nav ul {
+            list-style: none;
+        }
+
+        .sidebar-nav li {
+            margin: 4px 0;
+        }
+
+        .sidebar-nav a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar-nav a:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: white;
+        }
+
+        .sidebar-nav a.active {
+            background: rgba(255, 255, 255, 0.12);
+            color: white;
+            border-left-color: #667eea;
+            font-weight: 500;
+        }
+
+        .sidebar-nav .nav-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 260px;
+            flex: 1;
+            padding: 24px 32px;
+            min-height: 100vh;
+            overflow-y: auto;
+            background: #faf9f6;
+        }
+
+        .main-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .main-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .main-content::-webkit-scrollbar-thumb {
+            background: #d0d0d0;
+            border-radius: 4px;
+        }
+
+        .main-content::-webkit-scrollbar-thumb:hover {
+            background: #b0b0b0;
+        }
+
+        .form-container {
+            max-width: 700px;
+            margin: 0 auto;
+            background: white;
+            padding: 32px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e5e5e5;
+        }
+
+        .form-header {
+            margin-bottom: 24px;
+        }
+
+        .form-header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #1a1a1a;
+        }
+
+        .form-header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #1a1a1a;
+        }
+
+        .form-group label .required {
+            color: #c62828;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 16px;
+            padding-right: 40px;
+            border: 2px solid #e5e5e5;
+            border-radius: 8px;
+            font-size: 15px;
+            font-family: inherit;
+            transition: all 0.2s;
+            background: #faf9f6;
+        }
+
+        .form-group select {
+            padding-right: 16px;
+        }
+
+        .input-with-clear {
+            position: relative;
+        }
+
+        .clear-button {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #e5e5e5;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            color: #666;
+            transition: all 0.2s;
+            z-index: 10;
+            line-height: 1;
+        }
+
+        .input-with-clear:has(input:not(:placeholder-shown)) .clear-button,
+        .input-with-clear:has(input[value]:not([value=""])) .clear-button,
+        .input-with-clear:has(select:not([value=""])) .clear-button {
+            display: flex;
+        }
+
+        .clear-button:hover {
+            background: #d0d0d0;
+            color: #333;
+        }
+
+        .clear-button:active {
+            transform: translateY(-50%) scale(0.95);
+        }
+
+        /* Show clear button when select has a value */
+        .input-with-clear select:not([value=""]) + .clear-button {
+            display: flex;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-group small {
+            display: block;
+            margin-top: 4px;
+            color: #666;
+            font-size: 12px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .pain-level-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .pain-level-slider {
+            flex: 1;
+        }
+
+        .pain-level-value {
+            min-width: 50px;
+            text-align: center;
+            font-weight: 600;
+            color: #667eea;
+            font-size: 20px;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 8px;
+            background: #e5e5e5;
+            border-radius: 4px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        input[type="number"] {
+            width: 100%;
+        }
+
+        .submit-button {
+            width: 100%;
+            padding: 14px 28px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            margin-top: 8px;
+        }
+
+        .submit-button:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .submit-button:disabled {
+            background: #d0d0d0;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .success-message {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                flex-direction: row;
+                padding: 12px 16px;
+                border-right: none;
+                border-bottom: 1px solid #3a3a3a;
+            }
+
+            .sidebar-header {
+                padding: 0;
+                border-bottom: none;
+                flex: 1;
+            }
+
+            .sidebar-header h1 {
+                font-size: 18px;
+            }
+
+            .sidebar-header p {
+                display: none;
+            }
+
+            .sidebar-nav {
+                padding: 0;
+                flex: 0;
+            }
+
+            .sidebar-nav ul {
+                display: flex;
+                gap: 8px;
+            }
+
+            .sidebar-nav li {
+                margin: 0;
+            }
+
+            .sidebar-nav a {
+                padding: 8px 12px;
+                border-left: none;
+                border-bottom: 3px solid transparent;
+                border-radius: 6px;
+            }
+
+            .sidebar-nav a.active {
+                border-left: none;
+                border-bottom-color: #667eea;
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 16px;
+            }
+
+            .form-container {
+                padding: 24px;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h1>Headache Tracker</h1>
+            <p>Your health companion</p>
+        </div>
+        <nav class="sidebar-nav">
+            <ul>
+                <li><a href="/">
+                    <span class="nav-icon">C</span>
+                    <span>Chat</span>
+                </a></li>
+                <li><a href="/input" class="active">
+                    <span class="nav-icon">+</span>
+                    <span>Log Entry</span>
+                </a></li>
+                <li><a href="/analysis">
+                    <span class="nav-icon">A</span>
+                    <span>Analysis</span>
+                </a></li>
+            </ul>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="form-container">
+            <div class="form-header">
+                <h1>Log Headache Entry</h1>
+                <p>Quick and easy headache tracking</p>
+            </div>
+
+            <div id="successMessage" class="success-message">
+                ✅ Entry saved successfully!
+            </div>
+
+            <div id="errorMessage" class="error-message">
+                ❌ Error saving entry. Please try again.
+            </div>
+
+            <form id="headacheForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="date">Date <span class="required">*</span></label>
+                        <input type="date" id="date" name="date" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="startTime">Start Time <span class="required">*</span></label>
+                        <input type="time" id="startTime" name="startTime" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="painLevel">Pain Scale (0-10) <span class="required">*</span></label>
+                    <div class="pain-level-container">
+                        <input type="range" id="painLevel" name="painLevel" min="0" max="10" step="0.5" value="5" class="pain-level-slider" required>
+                        <span class="pain-level-value" id="painLevelValue">5</span>
+                    </div>
+                    <small>Drag the slider to select your pain level</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="painLocation">Pain Location</label>
+                    <div class="input-with-clear">
+                        <select id="painLocation" name="painLocation">
+                            <option value="">Select location...</option>
+                            <option value="entire head">Entire head</option>
+                            <option value="forehead">Forehead</option>
+                            <option value="temples">Temples</option>
+                            <option value="back of head">Back of head</option>
+                            <option value="one side">One side</option>
+                            <option value="behind eyes">Behind eyes</option>
+                            <option value="top of head">Top of head</option>
+                            <option value="neck">Neck</option>
+                        </select>
+                        <button type="button" class="clear-button" onclick="clearField('painLocation')" title="Clear selection">×</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="triggers">Possible Triggers</label>
+                    <div class="input-with-clear">
+                        <input type="text" id="triggers" name="triggers" placeholder="Type potential trigger">
+                        <button type="button" class="clear-button" onclick="clearField('triggers')" title="Clear field">×</button>
+                    </div>
+                    <small>Type potential trigger</small>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="medication">What medication did you take?</label>
+                        <div class="input-with-clear">
+                            <select id="medication" name="medication">
+                                <option value="">Select medication...</option>
+                                <option value="Ibuprofen">Ibuprofen</option>
+                                <option value="Tylenol">Tylenol</option>
+                                <option value="Aspirin">Aspirin</option>
+                                <option value="Excedrin">Excedrin</option>
+                                <option value="Aleve">Aleve</option>
+                                <option value="Advil">Advil</option>
+                                <option value="None">None</option>
+                            </select>
+                            <button type="button" class="clear-button" onclick="clearField('medication')" title="Clear selection">×</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="medicationCount">How many did you take?</label>
+                        <input type="number" id="medicationCount" name="medicationCount" min="0" max="10" step="1" placeholder="0">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="headache">Headache? <span class="required">*</span></label>
+                    <div class="input-with-clear">
+                        <select id="headache" name="headache" required>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                        </select>
+                        <button type="button" class="clear-button" onclick="resetField('headache', 'Yes')" title="Reset to default">↺</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="notes">Note</label>
+                    <textarea id="notes" name="notes" placeholder="Any additional notes..."></textarea>
+                </div>
+
+                <button type="submit" class="submit-button" id="submitBtn">Save Entry</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Set default date and time to now
+        const now = new Date();
+        document.getElementById('date').valueAsDate = now;
+        
+        // Set default time to current time (rounded to nearest 15 minutes)
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(Math.round(now.getMinutes() / 15) * 15).padStart(2, '0');
+        document.getElementById('startTime').value = `${hours}:${minutes}`;
+
+        // Update pain level display
+        const painLevelSlider = document.getElementById('painLevel');
+        const painLevelValue = document.getElementById('painLevelValue');
+        
+        painLevelSlider.addEventListener('input', function() {
+            painLevelValue.textContent = this.value;
+        });
+
+        // Clear field function
+        function clearField(fieldId) {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.value = '';
+                field.focus();
+                updateClearButtons();
+            }
+        }
+
+        // Reset field to default value
+        function resetField(fieldId, defaultValue) {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.value = defaultValue;
+                updateClearButtons();
+            }
+        }
+
+        // Update clear button visibility
+        function updateClearButtons() {
+            document.querySelectorAll('.input-with-clear').forEach(container => {
+                const input = container.querySelector('input, select');
+                const clearBtn = container.querySelector('.clear-button');
+                if (input && clearBtn) {
+                    if (input.value && input.value !== '') {
+                        clearBtn.style.display = 'flex';
+                    } else {
+                        clearBtn.style.display = 'none';
+                    }
+                }
+            });
+        }
+
+        // Add event listeners to show/hide clear buttons
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.input-with-clear input, .input-with-clear select').forEach(field => {
+                field.addEventListener('input', updateClearButtons);
+                field.addEventListener('change', updateClearButtons);
+            });
+            updateClearButtons();
+        });
+
+        // Handle form submission
+        const form = document.getElementById('headacheForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const successMessage = document.getElementById('successMessage');
+        const errorMessage = document.getElementById('errorMessage');
+
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            // Hide previous messages
+            successMessage.style.display = 'none';
+            errorMessage.style.display = 'none';
+
+            // Disable submit button
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Saving...';
+
+            // Get form data
+            const formData = {
+                date: document.getElementById('date').value,
+                startTime: document.getElementById('startTime').value,
+                painLevel: document.getElementById('painLevel').value,
+                painLocation: document.getElementById('painLocation').value,
+                triggers: document.getElementById('triggers').value,
+                medication: document.getElementById('medication').value,
+                medicationCount: document.getElementById('medicationCount').value || '0',
+                headache: document.getElementById('headache').value,
+                notes: document.getElementById('notes').value
+            };
+
+            try {
+                const response = await fetch('/api/submit-entry', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    successMessage.style.display = 'block';
+                    form.reset();
+                    // Reset to defaults
+                    document.getElementById('date').valueAsDate = new Date();
+                    const now = new Date();
+                    const hours = String(now.getHours()).padStart(2, '0');
+                    const minutes = String(Math.round(now.getMinutes() / 15) * 15).padStart(2, '0');
+                    document.getElementById('startTime').value = `${hours}:${minutes}`;
+                    document.getElementById('painLevel').value = 5;
+                    painLevelValue.textContent = '5';
+                    document.getElementById('headache').value = 'Yes';
+                    
+                    // Scroll to top to show success message
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                    errorMessage.textContent = `❌ ${data.message || 'Error saving entry. Please try again.'}`;
+                    errorMessage.style.display = 'block';
+                }
+            } catch (error) {
+                errorMessage.textContent = '❌ Network error. Please check your connection and try again.';
+                errorMessage.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Save Entry';
+            }
+        });
+    </script>
+</body>
+</html>
